@@ -69,7 +69,7 @@ void Monoprice::processZoneStatusQuery(int vzone)
             V2M_TB(_vianet->getBass(vzone)),
             _vianet->getLoudness(vzone) ? 10 : 5, //balance
             _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone],
-            0//keypad
+            0 //keypad
             );
 }
 
@@ -89,7 +89,7 @@ void Monoprice::processStatusQuery(int vzone)
     case M_COC("BL"): value = _vianet->getLoudness(vzone) ? 10 : 5; break;
     case M_COC("CH"): value = _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone]; break;
     case M_COC("LS"): value = 0; break;
-    //default: return;
+    default: return;
   }
 
   if (!_endl)

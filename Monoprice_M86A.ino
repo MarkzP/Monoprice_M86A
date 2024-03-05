@@ -4,11 +4,13 @@
 Vianet vianet;
 Monoprice monoprice;
 
+#define TE_PIN  2
+
 void setup()
 {
   delay(200);
 
-  vianet.begin(&Serial1, 2);
+  vianet.begin(&Serial1, TE_PIN);
   monoprice.begin(&Serial, &vianet);
 }
 
@@ -20,6 +22,8 @@ void loop()
 
 
 /*
+// This section was used to as a makeshift protocol sniffer, by physically hacking into the HC6 controller & tapping the RS485 driver pins to separate serial ports.
+// Left here for prosperity.
 void setup() {
 
   delay(200);

@@ -1,6 +1,10 @@
 #ifndef __VIANET_H
 #define __VIANET_H
 
+// This is a clean room reverse engineering of the communication protocol used between an Elan HC6 controller & 1 to 4 M86a Multi-Zone Amplifiers.
+// This protocol is not publicly documented anywhere; this is an effort to implement the minimal commands required to match the Monoprice API features.
+// Note that I could only get this to work reliably with Teensy boards, thanks to hardware control of the Transmit Enable pin.
+
 #include <Arduino.h>
 #include <HardwareSerial.h>
 

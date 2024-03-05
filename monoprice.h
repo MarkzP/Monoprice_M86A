@@ -1,6 +1,11 @@
 #ifndef __MONOPRICE_H
 #define __MONOPRICE_H
 
+// Based on info gathered from these sources (I don't actually own one):
+// https://www.monoprice.com/product?p_id=10761
+// https://github.com/etsinko/pymonoprice
+// https://github.com/jnewland/mpr-6zhmaut-api
+
 #include <Arduino.h>
 #include "vianet.h"
 
