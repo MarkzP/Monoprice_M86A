@@ -2,7 +2,7 @@
 #include "monoprice.h"
 
 
-#define ENDL "\r"
+#define ENDL "\r\n#"
 
 #define M_COC(s) ((s[0] << 8) + s[1])
 
