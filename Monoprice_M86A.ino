@@ -6,8 +6,11 @@ Monoprice monoprice;
 
 #define TE_PIN  2
 
+#define TO_ZONE_1  LED_BUILTIN
+
 void setup()
 {
+  pinMode(TO_ZONE_1, OUTPUT);
   delay(200);
 
   vianet.begin(&Serial1, TE_PIN);
@@ -17,6 +20,11 @@ void setup()
 void loop()
 {
   monoprice.update();
+
+  // Zone Activated Trigger example:
+  // Unlike the Monoprice amp (& older Elan S86a units), M86a's are lacking 12v trigger outputs on zones.
+  // It can be emulated with a GPIO pin - ex. this can be used to turn on a subwoofer amp if Zone 1 is active.
+  digitalWriteFast(TO_ZONE_1, vianet.isZoneOnline(1) && vianet.getSource(1) != 0 ? HIGH : LOW);
 }
 
 

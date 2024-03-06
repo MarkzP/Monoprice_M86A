@@ -325,7 +325,7 @@ void Vianet::setSource(int zone, int src)
   else
   {
     if (zone < 1 || zone > _maxZones) return;
-    if (src < 1 || src > 8) return;
+    if (src < 1 || src > _maxSources) return;
 
     bool power = getSource(zone) != 0;
 
@@ -466,6 +466,23 @@ int Vianet::getTreble(int zone)
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].treble;
 }
 
+bool Vianet::getSenseInput(int zone)
+{
+  if (zone < 1 || zone > _maxZones) return false;
+
+  return _m86a[_VUNIT(zone)].senseInput[_VZONE(zone)];
+}
+
+bool Vianet::isAudioSourceDetected(int src)
+{
+  if (src < 1 || src > _maxSources) return false;
+  src--;
+
+  return (_m86a[0].unitId != 0 && _m86a[0].audioSource[src])
+      || (_m86a[1].unitId != 0 && _m86a[1].audioSource[src])
+      || (_m86a[2].unitId != 0 && _m86a[2].audioSource[src])
+      || (_m86a[3].unitId != 0 && _m86a[3].audioSource[src]);
+}
 
 void Vianet::begin(HardwareSerial* port, uint16_t transmitEnablePin)
 {

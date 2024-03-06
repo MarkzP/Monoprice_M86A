@@ -41,6 +41,9 @@ void Monoprice::processZoneCommand(int vzone)
       case M_COC("BL"):
         _vianet->setLoudness(vzone, _value == 10);
         break;
+      case M_COC("LO"):
+        _vianet->setLoudness(vzone, _value != 0);
+        break;
       case M_COC("CH"):
         _vianet->setSource(vzone, _value);
         if (_value != 0) _lastSource[vzone - 1] = _value;
@@ -67,9 +70,9 @@ void Monoprice::processZoneStatusQuery(int vzone)
             V2M_VOL(_vianet->getVolume(vzone)),
             V2M_TB(_vianet->getTreble(vzone)),
             V2M_TB(_vianet->getBass(vzone)),
-            _vianet->getLoudness(vzone) ? 10 : 5, //balance
+            _vianet->getLoudness(vzone) ? 10 : 5, //report loudness instead of balance
             _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone],
-            0 //keypad
+            _vianet->getSenseInput(vzone) ? 1 : 0 // report sense input instead of keypad status
             );
 }
 
@@ -87,8 +90,9 @@ void Monoprice::processStatusQuery(int vzone)
     case M_COC("TR"): value = V2M_TB(_vianet->getTreble(vzone)); break;
     case M_COC("BS"): value = V2M_TB(_vianet->getBass(vzone)); break;
     case M_COC("BL"): value = _vianet->getLoudness(vzone) ? 10 : 5; break;
+    case M_COC("LO"): value = _vianet->getLoudness(vzone) ? 1 : 0; break;
     case M_COC("CH"): value = _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone]; break;
-    case M_COC("LS"): value = 0; break;
+    case M_COC("LS"): value = _vianet->getSenseInput(vzone) ? 1 : 0; break;
     default: return;
   }
 
@@ -103,13 +107,14 @@ void Monoprice::processStatusQuery(int vzone)
 
 void Monoprice::begin(Stream* port, Vianet* vianet)
 {
-  pinMode(LED_BUILTIN, OUTPUT);
   _port = port;
   _vianet = vianet;
 }
 
 void Monoprice::update()
 {
+  if (_vianet == nullptr || _port == nullptr) return;
+  
   _vianet->update();
 
   for (int i = 1; i <= 18; i++)
@@ -121,7 +126,7 @@ void Monoprice::update()
   
   if (!_port->available()) return;
 
-  char c = (char)_port->read(); 
+  char c = (char)_port->read() & 0x05f;
 
   if (c == '\r')
   {
@@ -184,8 +189,8 @@ void Monoprice::update()
       break;
     case MP_cmd_unit:
       // command - unit
-      // valid chars: '1' to '3'
-      if (c >= '1' && c <= '3')
+      // valid chars: '1' to '4'
+      if (c >= '1' && c <= '4')
       {
         _mzone = 10 * (c - '0');
         _state = MP_cmd_mzone;
@@ -204,13 +209,21 @@ void Monoprice::update()
       break;     
     case MP_cmd_coc1:
       // Control object code 1
-      _coc = (c & 0x5f) << 8;
-      _state = MP_cmd_coc2;
+      if (c >= 'A' && c <='Z')
+      {
+        _coc = (uint16_t)c << 8;
+        _state = MP_cmd_coc2;
+      }
+      else _state = MP_init;
       break;
     case MP_cmd_coc2:
       // Control object code 2
-      _coc += (c & 0x5f);
-      _state = MP_cmd_cv10;
+      if (c >= 'A' && c <='Z')
+      {
+        _coc += (uint16_t)c;
+        _state = MP_cmd_cv10;
+      }
+      else _state = MP_init;
       break;
     case MP_cmd_cv10:
       // Control value decades
@@ -232,8 +245,8 @@ void Monoprice::update()
       break;
     case MP_qry_unit:
       // inquiry - unit
-      // valid chars: '0' to '3' -- unit 0 is used for debugging
-      if (c >= '0' && c <= '3')
+      // valid chars: '0' to '4' -- unit 0 is used for debugging
+      if (c >= '0' && c <= '4')
       {
         _mzone = 10 * (c - '0');
         _state = MP_qry_mzone;
@@ -252,13 +265,21 @@ void Monoprice::update()
       break;
     case MP_qry_coc1:
       // Control object code 1
-      _coc = (c & 0x5f) << 8;
-      _state = MP_qry_coc2;
+      if (c >= 'A' && c <='Z')
+      {     
+        _coc = (uint16_t)c << 8;
+        _state = MP_qry_coc2;
+      }
+      else _state = MP_init;
       break;
     case MP_qry_coc2:
       // Control object code 2
-      _coc += (c & 0x5f);
-      _state = MP_qry_complete;
+      if (c >= 'A' && c <='Z')
+      {
+        _coc += (uint16_t)c;
+        _state = MP_qry_complete;
+      }
+      else _state = MP_init;
       break;
 
     default:
