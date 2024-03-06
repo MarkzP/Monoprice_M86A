@@ -55,12 +55,13 @@ void Monoprice::processZoneStatusQuery(int vzone)
 {
   if (!_vianet->isZoneOnline(vzone)) return;
 
-  if (!_endl)
+  // Insert an extra line before reporting status
+  if (_endl)
   {
     _port->print(ENDL);
-    _endl = true;
+    _endl = false;
   }
-  
+
   _port->printf(">%02d%02d%02d%02d%02d%02d%02d%02d%02d%02d%02d" ENDL,
             V2M_Z(vzone),
             _vianet->getPage(vzone) ? 1 : 0,
@@ -72,7 +73,7 @@ void Monoprice::processZoneStatusQuery(int vzone)
             V2M_TB(_vianet->getBass(vzone)),
             _vianet->getLoudness(vzone) ? 10 : 5, //report loudness instead of balance
             _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone],
-            _vianet->getSenseInput(vzone) ? 1 : 0 // report sense input instead of keypad status
+            _vianet->getSenseInput(vzone) ? 11 : 10 // report sense input instead of keypad status - this could also be used to differentiate this from the real Monoprice amp
             );
 }
 
@@ -94,12 +95,6 @@ void Monoprice::processStatusQuery(int vzone)
     case M_COC("CH"): value = _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone]; break;
     case M_COC("LS"): value = _vianet->getSenseInput(vzone) ? 1 : 0; break;
     default: return;
-  }
-
-  if (!_endl)
-  {
-    _port->print(ENDL);
-    _endl = true;
   }
 
   _port->printf(">%02d%c%c%02d" ENDL, V2M_Z(vzone), (char)((_coc & 0xff00) >> 8), (char)(_coc & 0x00ff), value);
@@ -126,12 +121,11 @@ void Monoprice::update()
   
   if (!_port->available()) return;
 
-  char c = (char)_port->read() & 0x05f;
+  char c = (char)_port->read();
+  if (c >= 'a' && c <= 'z') c &= 0x05f;
 
   if (c == '\r')
-  {
-    _endl = false;
-    
+  { 
     int munit = MUNIT(_mzone);
     int vzone = M2V_Z(_mzone);
 
@@ -160,6 +154,7 @@ void Monoprice::update()
       }
       else
       {
+        _endl = true;
         for (int i = 1; i <= 18; i++)
         {
           if (vzone == i || VUNIT(i) == munit) processZoneStatusQuery(i);
