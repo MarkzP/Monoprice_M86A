@@ -11,7 +11,12 @@ This offers very low noise and ample output power (~50w per channel), with bette
 
 These units are fairly common on eBay/Marketplace, but unfortunately they are not intended to integrate with 3rd party systems (unlike the older S86a on which they are based).
 This is an attempt to extend the life of these nice units as they will very likely outlive the Elan controllers they were designed to be used with - ask me how I know! 
-
+---
+## Requirements
+- Arduino (tested with 1.8.19)
+- Teensyduino add-on (tested with 1.58)
+- Basic wiring skills
+- The desire to salvage perfectly working hardware that would otherwise endup in a landfill
 ---
 ## Features
 - Supports 4 M86a units for 24 zones in total (limited to 18 zones in Home Assistant)
