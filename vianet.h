@@ -62,6 +62,9 @@ class Vianet
     int getVolume(int zone);
     int getBass(int zone);
     int getTreble(int zone);
+
+    bool getSenseInput(int zone);
+    bool isAudioSourceDetected(int src);
    
     void begin(HardwareSerial* port, uint16_t transmitEnablePin);
     bool update();
@@ -72,6 +75,7 @@ class Vianet
     
   private:
     const int _maxZones = 24;
+    const int _maxSources = 8;
 
     bool getNextByte(byte* c, int us = 500);
     bool readUnitStatus();   
