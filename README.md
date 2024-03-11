@@ -10,7 +10,8 @@ Zone volume & tone control is implemented with the TDA7418 audio processor. Powe
 This offers very low noise and ample output power (~50w per channel), with better specs than the Monoprice units overall.
 
 These units are fairly common on eBay/Marketplace, but unfortunately they are not intended to integrate with 3rd party systems (unlike the older S86a on which they are based).
-This is an attempt to extend the life of these nice units as they will very likely outlive the Elan controllers they were designed to be used with - ask me how I know! 
+This is an attempt to extend the life of these nice units as they will very likely outlive the Elan controllers they were designed to be used with - ask me how I know!
+
 
 ---
 ## Requirements
@@ -29,7 +30,7 @@ This is an attempt to extend the life of these nice units as they will very like
 
 - Supports 1-4 M86a units for a potential of 24 zones (limited to 18 zones in Home Assistant)
 - 8 audio sources (limited to 6 in Home Assistant)
-- Monoprice Serial API exposed via USB
+- Monoprice Serial API exposed via USB Serial
 - Zone Loudness control instead of Balance (center = loudness on)
 - Zone Sense inputs reported as Keypad connection status (not currently visible in HA but could be easily added)
 
