@@ -40,7 +40,7 @@ class Monoprice
   
     Stream* _port;
     Vianet* _vianet;
-    uint16_t _coc = 0;
+    unsigned short _coc = 0;
     int _value = 0;
     int _mzone = 0;
     States _state = MP_init;

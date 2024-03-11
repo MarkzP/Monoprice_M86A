@@ -3,10 +3,8 @@
 
 // This is a clean room reverse engineering of the communication protocol used between an Elan HC6 controller & 1 to 4 M86a Multi-Zone Amplifiers.
 // This protocol is not publicly documented anywhere; this is an effort to implement the minimal commands required to match the Monoprice API features.
-// Note that I could only get this to work reliably with Teensy boards, thanks to hardware control of the Transmit Enable pin.
 
 #include <Arduino.h>
-#include <HardwareSerial.h>
 
 class M86a_Zone
 {
@@ -66,7 +64,7 @@ class Vianet
     bool getSenseInput(int zone);
     bool isAudioSourceDetected(int src);
    
-    void begin(HardwareSerial* port, uint16_t transmitEnablePin);
+    void begin(HardwareSerial* port, int transmitEnablePin = 2);
     bool update();
     bool refresh();
     void print(Print* p);
@@ -76,18 +74,19 @@ class Vianet
   private:
     const int _maxZones = 24;
     const int _maxSources = 8;
-
+    
+    void writeBytes(byte* buf, int len);
     bool getNextByte(byte* c, int us = 500);
     bool readUnitStatus();   
     bool sendNextFrame();
     void sendControlCommand(byte cmd[4]);
-    void initMaster();
-    
+    void initMaster();    
 
     unsigned long _lastFrameMicros;
     bool _isMaster = false;
-    uint16_t _symbol = 0;
+    unsigned short _symbol = 0;
     int _frame = 0;
+    int _te;
     HardwareSerial* _port;
     Print* _debug = nullptr;
     M86a _m86a[4];

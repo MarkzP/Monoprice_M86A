@@ -1,6 +1,8 @@
 
 #include "vianet.h"
 
+#define FRAME_US  300
+
 #define _VUNIT(z) ((z - 1) / 6)
 #define _VZONE(z) ((z - 1) % 6)
 
@@ -13,7 +15,7 @@
 #define _HDR_U3   0x76
 #define _HDR_U4   0x77
 
-const uint16_t vianet_frame[] =
+const unsigned short vianet_frame[] =
 {
   0x6500, 0x5502, 0x0504, 0x3506, 0xa508, 0x950a, 0xc50c, 0xf50e,
   0xd510, 0xe512, 0xb514, 0x8516, 0x1518, 0x251a, 0x751c, 0x451e,
@@ -33,7 +35,7 @@ const uint16_t vianet_frame[] =
   0x55f0, 0x65f2, 0x35f4, 0x05f6, 0x95f8, 0xa5fa, 0xf5fc, 0xc5fe
 };
 
-const uint16_t vianet_payload[] =
+const unsigned short vianet_payload[] =
 {
   0x9100, 0xa102, 0xf104, 0xc106, 0x5108, 0x610a, 0x310c, 0x010e,
   0x2110, 0x1112, 0x4114, 0x7116, 0xe118, 0xd11a, 0x811c, 0xb11e,
@@ -174,6 +176,22 @@ void M86a::print(Print* p)
   }
 }
 
+void Vianet::writeBytes(byte* buf, int len)
+{
+  if (_port->available())
+  {
+    if (_debug != nullptr) _debug->printf("[!%d bytes waiting]\r\n", _port->available());
+    while (_port->available()) _port->read();
+  }
+  
+  digitalWrite(_te, HIGH);
+
+  _port->write(buf, len);
+  _port->flush();
+
+  digitalWrite(_te, LOW);
+}
+
 bool Vianet::getNextByte(byte* c, int us)
 {
   us /= 10;
@@ -195,14 +213,14 @@ bool Vianet::readUnitStatus()
   byte c = 0;
   if (!getNextByte(&c, 1000)) return false;
   
-  uint16_t preamble = ((uint16_t)c << 8);
+  unsigned short preamble = ((unsigned short)c << 8);
   if (!getNextByte(&c)) return false;
   preamble += c;
   bool valid = preamble == 0xfd56;  
   
   byte data[45];
   int len = 0;
-  uint16_t rawSymbol = 0;
+  unsigned short rawSymbol = 0;
 
   while (len < 45)
   {
@@ -222,7 +240,7 @@ bool Vianet::readUnitStatus()
     else
     {
       rawSymbol += c;
-      uint16_t symbol = (rawSymbol & 0xfe) >> 1;
+      unsigned short symbol = (rawSymbol & 0xfe) >> 1;
       data[len++] = symbol;
       rawSymbol = 0;
     }
@@ -242,29 +260,21 @@ bool Vianet::readUnitStatus()
 bool Vianet::sendNextFrame()
 {
   unsigned long now = micros();
-  if ((now - _lastFrameMicros) < 100) return false;
+  if ((now - _lastFrameMicros) < FRAME_US) return false;
   _lastFrameMicros = now;
   
   if (++_frame > 127) _frame = 0;
-
-  if (_port->available())
-  {
-    if (_debug != nullptr) _debug->printf("[!%d bytes waiting]\r\n", _port->available());
-    _port->clear();
-  }
-
+  
   if (_frame == 1)
   {
     byte enc[12] = { 0xed, 0x06, 0x91, 0x00, 0x91, 0x00, 0xa1, 0x02, 0x91, 0x00, 0x91, 0x00 };
-    _port->write(enc, 12);    
-    _port->flush();
+    writeBytes(enc, 12);
   }
   else
   {
-    uint16_t encodedFrame = vianet_frame[_frame];
+    unsigned short encodedFrame = vianet_frame[_frame];
     byte enc[2] = { _HB(encodedFrame), _LB(encodedFrame) };
-    _port->write(enc, 2);
-    _port->flush();
+    writeBytes(enc, 2);
 
     if (_frame == _HDR_U1 || _frame == _HDR_U2 || _frame == _HDR_U3 || _frame == _HDR_U4) return readUnitStatus();
   }
@@ -278,31 +288,27 @@ void Vianet::sendControlCommand(byte cmd[4])
   if ((now - _lastFrameMicros) < 100) delayMicroseconds(100 - (now - _lastFrameMicros));
   _lastFrameMicros = micros();
   
-  uint16_t p0 = vianet_payload[cmd[0]];
-  uint16_t p1 = vianet_payload[cmd[1]];
-  uint16_t p2 = vianet_payload[cmd[2]];
-  uint16_t p3 = vianet_payload[cmd[3]];
+  unsigned short p0 = vianet_payload[cmd[0]];
+  unsigned short p1 = vianet_payload[cmd[1]];
+  unsigned short p2 = vianet_payload[cmd[2]];
+  unsigned short p3 = vianet_payload[cmd[3]];
 
   byte enc[12] = { 0xed, 0x06, 0xd3, 0xfe, _HB(p0), _LB(p0), _HB(p1), _LB(p1), _HB(p2), _LB(p2), _HB(p3), _LB(p3) };
 
   if (_debug != nullptr) _debug->printf("[0x%02x%02x 0x%02x%02x 0x%02x%02x 0x%02x%02x 0x%02x%02x 0x%02x%02x]\r\n", enc[0], enc[1], enc[2], enc[3], enc[4], enc[5], enc[6], enc[7], enc[8], enc[9], enc[10], enc[11] );
 
-  _port->write(enc, 12);
-  _port->flush();
+  writeBytes(enc, 12);
 }
 
 void Vianet::initMaster()
 {
   byte enc[2] = { 0x55, 0x02 };
-  _port->write(enc, 2);
-  _port->flush();
+  writeBytes(enc, 2);
 
   delayMicroseconds(1000);  
   do
   {
-    _port->clear();
-    _port->write(enc, 2);
-    _port->flush();
+    writeBytes(enc, 2);
     delayMicroseconds(100);
   } while (_port->available());
 
@@ -334,7 +340,7 @@ void Vianet::setSource(int zone, int src)
 
     if (!power)
     {
-      delayMicroseconds(100);
+      delayMicroseconds(FRAME_US);
       update();
       byte payloadPwr[] = { 0x04, (byte)zone, 0x04, 0x11 };
       sendControlCommand(payloadPwr);
@@ -484,11 +490,14 @@ bool Vianet::isAudioSourceDetected(int src)
       || (_m86a[3].unitId != 0 && _m86a[3].audioSource[src]);
 }
 
-void Vianet::begin(HardwareSerial* port, uint16_t transmitEnablePin)
+void Vianet::begin(HardwareSerial* port, int transmitEnablePin)
 {
+  _te = transmitEnablePin;
+  pinMode(_te, OUTPUT);
+  digitalWrite(_te, LOW);
+  
   _port = port;
   _port->begin(115200);
-  _port->transmitterEnable(transmitEnablePin);
 
   for (int i = 0; i < 4; i++)
   {
@@ -508,7 +517,7 @@ bool Vianet::update()
       
       if ((c & 0x01) == 0x01)
       {
-        _symbol = (uint16_t)c << 8;
+        _symbol = (unsigned short)c << 8;
       }
       else
       {

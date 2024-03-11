@@ -1,5 +1,5 @@
 # Monoprice_M86A
-Teensy based USB protocol translator allowing Home Assistant integration with Elan M86A multi-zone amplifiers.
+Protocol translator allowing Home Assistant integration with Elan M86A multi-zone amplifiers.
 It provides an API compatible with the Monoprice 6 zone amplifier, which is already supported in Home Assistant.
 
 This is a clean room reverse engineering of the communication protocol used between an Elan HC6 controller & 1 to 4 M86a Multi-Zone Amplifiers.
@@ -11,25 +11,37 @@ This offers very low noise and ample output power (~50w per channel), with bette
 
 These units are fairly common on eBay/Marketplace, but unfortunately they are not intended to integrate with 3rd party systems (unlike the older S86a on which they are based).
 This is an attempt to extend the life of these nice units as they will very likely outlive the Elan controllers they were designed to be used with - ask me how I know! 
+
 ---
 ## Requirements
+
 - Arduino (tested with 1.8.19)
-- Teensyduino add-on (tested with 1.58)
+- Arduino-pico https://github.com/earlephilhower/arduino-pico (tested with 3.7.2)
+- OR
+- Teensyduino add-on https://www.pjrc.com/teensy/teensyduino.html (tested with 1.58)
+- 3.3v RS-485 transceiver
+- A few resistors & one lone capacitor
 - Basic wiring skills
 - The desire to salvage perfectly working hardware that would otherwise endup in a landfill
+
 ---
 ## Features
-- Supports 4 M86a units for 24 zones in total (limited to 18 zones in Home Assistant)
+
+- Supports 1-4 M86a units for a potential of 24 zones (limited to 18 zones in Home Assistant)
 - 8 audio sources (limited to 6 in Home Assistant)
 - Monoprice Serial API exposed via USB
 - Zone Loudness control instead of Balance (center = loudness on)
 - Zone Sense inputs reported as Keypad connection status (not currently visible in HA but could be easily added)
 
 ## Missing/Unsupported
+
 - Unit configuration such as source input levels, min/max volume, etc.
 - Firmware updates
 - Doorbell control
+- IR routing (may work but untested)
 - Any other Via!Net accessory such as TS2 touchpanels
+- Not all Monoprice API commands are implemented
+
 ---
 ## Hardware implementation:
 
@@ -37,15 +49,15 @@ This is an attempt to extend the life of these nice units as they will very like
          |                          ____ 47k
   +3.3v  |---------------------+---|____|--+
          |                0.1u |           |
-         |             GND -)|-+           |
- T       |                     |           |
- E       |             +-------x-------+   |
- E       |             |      3.3v     |   |
- N       |         +-->| DE            |   |      ____ 100
- S       |         |   |              A|---+-----|____|----<> 4
- Y     2 |---- TE -+---| /RE           |
+ A       |             GND -)|-+           |
+ R       |                     |           |
+ D       |             +-------x-------+   |
+ U       |             |      3.3v     |   |
+ I       |         +-->| DE            |   |      ____ 100
+ N       |         |   |              A|---+-----|____|----<> 4
+ O     2 |---- TE -+---| /RE           |
          |             |    RS-485     |          ____ 100
-   TX1 1 |---- TXD --->| D            B|---+-----|____|----<> 3   Via!Net
+   TX1 1 |---- TXD --->| D            B|---+-----|____|----<> 3   Via!Net 
          |             |               |   |                        RJ45
    RX1 0 |<--- RXD ----| R    GND      |   |
          |             |               |   |
@@ -59,20 +71,33 @@ This is an attempt to extend the life of these nice units as they will very like
 
 Pretty much all components other than the RS485 driver & Teensy can be omitted, but are strongly recommended for long term reliability & stability.
 
-- Teensy: tested with LC & T4.0; should work with all T3.x & T4.x
-  Note that I could only get this to work reliably with Teensy boards, thanks to hardware control of the Transmit Enable pin.
-  It may be possible to get the timing right on a RP2040 by leveraging the PIO hardware.
+- Arduino: tested with Rasperry Pi Pico (RP2040), Teensy LC & Teensy 4.0; should work with all T3.x & T4.x  
   
 - RS-485 driver: tested with a 75HVD10; viable alternatives are MAX3483, 65HVD10, LTC1480, ADM3072
   There are many suitable RS-485 drivers available; make sure to use only 3.3v rated components
 
 - Note that the Via!Net RJ45 pinout is not standard - 3&4 are on the same twisted pair.
   It doesn't matter much for short cable distances however.
+  
 ---
+## Setting up multiple units
+
+Refer to the Elan M86a installation guide (can be found online).
+Make sure that each unit is configured with a different id by setting the front panel Chassis ID dip switches:
+
+-Unit 1:   UP	UP	UP
+-Unit 2:   UP	UP	dn
+-Unit 3:   UP	dn	UP
+-Unit 4:   UP	dn	dn
+
+---
+
 ## Via!Net Protocol overview
+
 This is my interpretation of the signaling layer:
 - Serial Format is 115200 bauds, 8 bits, no parity, 1 stop bit 
 - There are 128 symbols (7bits encoded as 2 bytes/16bits), with different (but similar) encodings for frame & payload data:
+
 ```
 MSB
 15:12:  Some kind of cyclic value (not sure how this is computed, different sequence per symbol type)
@@ -83,9 +108,11 @@ MSB
 0:      Always 0 for low byte (sent last)
 LSB
 ```
+
 The extra bits 15:12 are likely used to discard corrupted symbols; they are not evenly distributed as would be the case with transition-centered encodings such as Manchester, thus they don't do a terrible job at keeping dc balance. Galvanic isolation may work, but I did not try it.
 The master unit polls each 128 frame in sequence continuously, waiting ~100us for an reply before polling the next frame. This results in a ~35ms full cycle time, or around 25Hz
 Each of the 4 physical unit will report status on a different frame using this format, if present & powered on:
+
 ```
 Response:
 0xfd56 + 45 symbols (92 bytes in total)
@@ -155,6 +182,7 @@ Offsets: 2  8  14 20 26 32  :   6   ? (always 0)
 ```
 
 Commands are inserted anywhere in the poll sequence using this format:
+
 ```
 (payload symbols s0 to s3 are represented as their 7 bit value here)
 
@@ -190,6 +218,7 @@ Commands are inserted anywhere in the poll sequence using this format:
         0x01    zone    bass (0x3a (58) = min, 0x46 (70) = max)
         0x02    zone    treble (0x3a (58) = min, 0x46 (70) = max)
 ```
+
 An interresting fact is that the primary M86a unit will start acting as a Master if there's no activity on the bus for a certain (short) period of time.
 To re-gain control of the bus, we wait for a certain symbol & then repeat it twice before resuming the polling sequence.
 This often causes collisions for a while, but will resorb within a few polling cycles

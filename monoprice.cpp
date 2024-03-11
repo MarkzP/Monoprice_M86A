@@ -93,7 +93,7 @@ void Monoprice::processStatusQuery(int vzone)
     case M_COC("BL"): value = _vianet->getLoudness(vzone) ? 10 : 5; break;
     case M_COC("LO"): value = _vianet->getLoudness(vzone) ? 1 : 0; break;
     case M_COC("CH"): value = _vianet->getSource(vzone) != 0 ? _vianet->getSource(vzone) : _lastSource[vzone]; break;
-    case M_COC("LS"): value = _vianet->getSenseInput(vzone) ? 1 : 0; break;
+    case M_COC("LS"): value = _vianet->getSenseInput(vzone) ? 11 : 10; break;
     default: return;
   }
 
@@ -206,7 +206,7 @@ void Monoprice::update()
       // Control object code 1
       if (c >= 'A' && c <='Z')
       {
-        _coc = (uint16_t)c << 8;
+        _coc = (unsigned short)c << 8;
         _state = MP_cmd_coc2;
       }
       else _state = MP_init;
@@ -215,7 +215,7 @@ void Monoprice::update()
       // Control object code 2
       if (c >= 'A' && c <='Z')
       {
-        _coc += (uint16_t)c;
+        _coc += (unsigned short)c;
         _state = MP_cmd_cv10;
       }
       else _state = MP_init;
@@ -262,7 +262,7 @@ void Monoprice::update()
       // Control object code 1
       if (c >= 'A' && c <='Z')
       {     
-        _coc = (uint16_t)c << 8;
+        _coc = (unsigned short)c << 8;
         _state = MP_qry_coc2;
       }
       else _state = MP_init;
@@ -271,7 +271,7 @@ void Monoprice::update()
       // Control object code 2
       if (c >= 'A' && c <='Z')
       {
-        _coc += (uint16_t)c;
+        _coc += (unsigned short)c;
         _state = MP_qry_complete;
       }
       else _state = MP_init;
