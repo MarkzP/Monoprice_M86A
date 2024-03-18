@@ -417,21 +417,21 @@ bool Vianet::isZoneOnline(int zone)
 
 int Vianet::getSource(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return 0;
-
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return 0;
+  
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].source;
 }
 
 bool Vianet::getDoNotDisturb(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return false;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return false;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].doNotDisturb;
 }
 
 bool Vianet::getPage(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return false;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return false;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].page;
 }
@@ -439,42 +439,42 @@ bool Vianet::getPage(int zone)
 
 bool Vianet::getLoudness(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return false;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return false;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].loudness;
 }
 
 bool Vianet::getMute(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return false;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return false;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].mute;
 }
 
 int Vianet::getVolume(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return 0;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return 0;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].volume;
 }
 
 int Vianet::getBass(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return 0;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return 0;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].bass;
 }
 
 int Vianet::getTreble(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return 0;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return 0;
 
   return _m86a[_VUNIT(zone)].zone[_VZONE(zone)].treble;
 }
 
 bool Vianet::getSenseInput(int zone)
 {
-  if (zone < 1 || zone > _maxZones) return false;
+  if (zone < 1 || zone > _maxZones || !isZoneOnline(zone)) return false;
 
   return _m86a[_VUNIT(zone)].senseInput[_VZONE(zone)];
 }

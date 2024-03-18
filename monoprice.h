@@ -44,7 +44,8 @@ class Monoprice
     int _value = 0;
     int _mzone = 0;
     States _state = MP_init;
-    int _lastSource[32];
+    int _lastSource[19];
+    int _lastVolume[19];
     bool _endl = false;
     bool _debug = false;
 };

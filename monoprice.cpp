@@ -12,7 +12,22 @@
 #define MUNIT(z) ((z % 10) == 0 ? z / 10 : 0)
 
 #define V2M_TB(v) (v < 4 ? 7 : ((v - 4) / 2) + 1)
+#define M2V_TB(v) (v + 57)
+
+#define VOLUME_FIX
+
+#ifdef VOLUME_FIX
+// volume below 23 is too low to be useable
+// 0-38 -> 23-99, 19 (50%) -> 61
+#define M2V_VOL(v) (v == 0 ? 0 : ((v * 2) + 23))
+// 38-0 -> 0-38
+#define V2M_VOL(v) (v > 38 ? 0 : (38 - v))
+#else
+// 0-38 -> 0-100
+#define M2V_VOL(v) ((100 * v) / 38)
+// 48-0 -> 0-38
 #define V2M_VOL(v) ((38 * (48 - v)) / 48)
+#endif
 
 void Monoprice::processZoneCommand(int vzone)
 {
@@ -30,13 +45,14 @@ void Monoprice::processZoneCommand(int vzone)
         _vianet->setDoNotDisturb(vzone, _value != 0);
         break;
       case M_COC("VO"):
-        _vianet->setVolume(vzone, (100 * _value) / 38);
+        _lastVolume[vzone] = _value;
+        _vianet->setVolume(vzone, M2V_VOL(_value));
         break;
-      case M_COC("TR"): // 0 - 14 -> 57 - 71
-        _vianet->setTreble(vzone, _value + 57);
+      case M_COC("TR"): 
+        _vianet->setTreble(vzone, M2V_TB(_value));
         break;
       case M_COC("BS"):
-        _vianet->setBass(vzone, _value + 57);
+        _vianet->setBass(vzone, M2V_TB(_value));
         break;
       case M_COC("BL"):
         _vianet->setLoudness(vzone, _value == 10);
@@ -46,7 +62,7 @@ void Monoprice::processZoneCommand(int vzone)
         break;
       case M_COC("CH"):
         _vianet->setSource(vzone, _value);
-        if (_value != 0) _lastSource[vzone - 1] = _value;
+        if (_value != 0) _lastSource[vzone] = _value;
         break;
     }
 }
@@ -68,7 +84,7 @@ void Monoprice::processZoneStatusQuery(int vzone)
             _vianet->getSource(vzone) != 0 ? 1 : 0,
             _vianet->getMute(vzone) ? 1 : 0,
             _vianet->getDoNotDisturb(vzone) ? 1 : 0,
-            V2M_VOL(_vianet->getVolume(vzone)),
+            _lastVolume[vzone],
             V2M_TB(_vianet->getTreble(vzone)),
             V2M_TB(_vianet->getBass(vzone)),
             _vianet->getLoudness(vzone) ? 10 : 5, //report loudness instead of balance
@@ -87,7 +103,7 @@ void Monoprice::processStatusQuery(int vzone)
     case M_COC("PR"): value = _vianet->getSource(vzone) != 0 ? 1 : 0; break;
     case M_COC("MU"): value = _vianet->getMute(vzone) ? 1 : 0; break;
     case M_COC("DT"): value = _vianet->getDoNotDisturb(vzone) ? 1 : 0; break;
-    case M_COC("VO"): value = V2M_VOL(_vianet->getVolume(vzone)); break;
+    case M_COC("VO"): value = _lastVolume[vzone]; break;
     case M_COC("TR"): value = V2M_TB(_vianet->getTreble(vzone)); break;
     case M_COC("BS"): value = V2M_TB(_vianet->getBass(vzone)); break;
     case M_COC("BL"): value = _vianet->getLoudness(vzone) ? 10 : 5; break;
@@ -104,6 +120,11 @@ void Monoprice::begin(Stream* port, Vianet* vianet)
 {
   _port = port;
   _vianet = vianet;
+  for (int i = 1; i <= 18; i++)
+  {
+    _lastSource[i] = 1;
+    _lastVolume[i] = 0;
+  }
 }
 
 void Monoprice::update()
@@ -116,7 +137,6 @@ void Monoprice::update()
   {
     int zsrc = _vianet->getSource(i);
     if (zsrc != 0) _lastSource[i] = zsrc;
-    else if (_lastSource[i] == 0) _lastSource[i] = 1;
   }
   
   if (!_port->available()) return;
